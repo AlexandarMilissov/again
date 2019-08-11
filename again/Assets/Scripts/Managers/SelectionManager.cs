@@ -14,7 +14,7 @@ public class SelectionManager : MonoBehaviour
     private Color selectedObjectDefaultColor;
     
     public Side currentSide;
-
+    public Transform middle;
 
 
     //left click
@@ -29,11 +29,11 @@ public class SelectionManager : MonoBehaviour
 
 
         GameObject pointedGameObject = GetPointedGameObject();
-        if (Input.GetMouseButtonDown(selectionKey))
+        if (Input.GetMouseButtonUp(selectionKey))
         {
             Select(pointedGameObject);
         }
-        else if (Input.GetMouseButtonDown(actionKey))
+        else if (Input.GetMouseButtonUp(actionKey))
         {
             DoAction(pointedGameObject);
         }
@@ -75,8 +75,25 @@ public class SelectionManager : MonoBehaviour
 
     void Select(GameObject toSelect)
     {
-        //check if we dont have object to select
         if(toSelect == null)
+        {
+            return;
+        }
+        //place unit if player has selected a new unit
+        if (currentSide.selectedToAdd != null)
+        {
+            if (toSelect.GetComponent<Tile>() != null
+                && toSelect.GetComponent<Tile>().unit == null)
+            {
+                currentSide.AddTheNewUnit(toSelect.GetComponent<Tile>());
+                return;
+            }
+        }
+
+
+
+        //check if we dont have object to select
+        if (toSelect == null)
         {
             return;
         }
@@ -107,8 +124,7 @@ public class SelectionManager : MonoBehaviour
             //we select the new object
             else if (selectedObject != toSelect)
             {
-                //we return its color
-                selectedObject.GetComponentInChildren<Renderer>().material.color = selectedObjectDefaultColor;
+                Deselect();
 
                 //select the new object
                 selectedObject = toSelect;
@@ -120,13 +136,18 @@ public class SelectionManager : MonoBehaviour
             //if we press the already selected object we deselect it
             else
             {
-                //we return its color
-                selectedObject.GetComponentInChildren<Renderer>().material.color = selectedObjectDefaultColor;
-                //and deselect it
-                selectedObject = null;
+                Deselect();
             }
 
         }
+    }
+
+    private void Deselect()
+    {
+        //we return its color
+        selectedObject.GetComponentInChildren<Renderer>().material.color = selectedObjectDefaultColor;
+        //and deselect it
+        selectedObject = null;
     }
 
     private GameObject FindParentWithTag(GameObject childObject, string tag)
@@ -149,14 +170,132 @@ public class SelectionManager : MonoBehaviour
 
     void DoAction(GameObject todoAction)
     {
-        if(currentSide.selectedToAdd != null)
+        if(todoAction == null)
         {
-            if(todoAction.GetComponent<Tile>() != null 
-                && todoAction.GetComponent<Tile>().unit == null)
+            return;
+        }
+
+
+        //check if we have selected object and is of type tile
+        if(selectedObject != null && selectedObject.GetComponent<Tile>() != null)
+        {
+            //check if there is a unit on our side on it
+            if (selectedObject.GetComponent<Tile>().unit != null && selectedObject.GetComponent<Tile>().unit.Side == currentSide)
             {
-                currentSide.AddTheNewUnit(todoAction.GetComponent<Tile>());
+                //check to see if tile is empty
+                if(todoAction.GetComponent<Tile>() != null && todoAction.GetComponent<Tile>().unit == null)
+                {
+                    Tile newTile = todoAction.GetComponent<Tile>();
+                    PathMove(newTile);
+                    Deselect();
+                }
             }
         }
     }
 
+    Queue<Tile> FindPath(Tile start, Tile end, out float cost)
+    {
+        cost = 0;
+
+        List<Tile> opened = new List<Tile>();
+        HashSet<Tile> closed = new HashSet<Tile>();
+        foreach (var n in start.nodes)
+        {
+            n.endTile.pathFindCostToHere = n.cost;
+            n.endTile.pathFindParent = start;
+            opened.Add(n.endTile);
+        }
+        closed.Add(start);
+
+        while (opened.Count != 0)
+        {
+            int i = opened.Count - 1;
+            for (; i >= 0; i--)
+            {
+                if(opened[i] == end)
+                {
+                    break;
+                }
+                closed.Add(opened[i]);
+                foreach(var n in opened[i].nodes)
+                {
+                    if(closed.Contains(n.endTile))
+                    {
+                        continue;
+                    }
+                    if(opened.Contains(n.endTile))
+                    {
+                        if(n.endTile.pathFindCostToHere > opened[i].pathFindCostToHere + n.cost)
+                        {
+                            n.endTile.pathFindParent = opened[i];
+                            n.endTile.pathFindCostToHere = opened[i].pathFindCostToHere + n.cost;
+                        }
+                    }
+                    else
+                    {
+                        n.endTile.pathFindParent = opened[i];
+                        n.endTile.pathFindCostToHere = opened[i].pathFindCostToHere + n.cost;
+                        opened.Add(n.endTile);
+                    }
+                }
+                opened.Remove(opened[i]);
+            }
+            if(end.pathFindParent != null)
+            {
+                break;
+            }
+        }
+        
+        Queue<Tile> path = new Queue<Tile>();
+        Tile t = end;
+        if(t.pathFindParent == null)
+        {
+            return null;
+        }
+        path.Enqueue(t);
+        while (t.pathFindParent != null)
+        {
+            path.Enqueue(t.pathFindParent);
+            t = t.pathFindParent;
+        }
+        cost = end.pathFindCostToHere;
+
+        foreach (var test in opened)
+        {
+            test.pathFindCostToHere = 0;
+            test.pathFindParent = null;
+        }
+        foreach (var test in closed)
+        {
+            test.pathFindCostToHere = 0;
+            test.pathFindParent = null;
+        }
+        return path;
+    }
+
+    void PathMove(Tile newTile)
+    {
+        Tile oldTile = selectedObject.GetComponent<Tile>();
+        Queue<Tile> path = FindPath(oldTile, newTile, out float cost);
+        Debug.Log(cost);
+
+        newTile.transform.Find("Visual").GetComponent<Renderer>().material.color = Color.red;
+        oldTile.transform.Find("Visual").GetComponent<Renderer>().material.color = Color.red;
+        foreach (var t in path)
+        {
+            t.transform.Find("Visual").GetComponent<Renderer>().material.color = Color.red;
+        }
+
+        MoveSelectedUnit(oldTile,newTile);
+    }
+    void MoveSelectedUnit(Tile oldTile, Tile newTile)
+    {
+
+        Unit u = oldTile.unit;
+        u.gameObject.transform.SetParent
+            (newTile.transform);
+        
+        newTile.AddUnit(u);
+        oldTile.RemoveUnit();
+    }
 }

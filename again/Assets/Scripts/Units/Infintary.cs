@@ -2,11 +2,13 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+[System.Serializable]
 public class Infintary : Unit
 {
-    public Infintary(Tile tile)
+    public Infintary(Tile tile, Side side)
     {
         this.Tile = tile;
+        this.Side = side;
         this.Armor = Armor.light ;
         this.Mount = null;
         this.Weapon = new Sword();

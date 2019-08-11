@@ -7,10 +7,11 @@ public class TurnManager : MonoBehaviour
 {
     private int turnCounter = 1;
     public Text text;
-    public Side left, right;
+    public Side left;
+    public Side right;
     public SelectionManager selectionManager;
 
-    public TurnManager()
+    void Start()
     {
         AssaingSide();
     }
@@ -43,6 +44,8 @@ public class TurnManager : MonoBehaviour
     {
         turnCounter++;
         text.text = turnCounter.ToString();
+        left.selectedToAdd = null;
+        right.selectedToAdd = null;
         AssaingSide();
     }
 }

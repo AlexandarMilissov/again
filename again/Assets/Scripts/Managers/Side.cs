@@ -5,17 +5,32 @@ using UnityEngine;
 
 public class Side : MonoBehaviour
 {
-    public string name;
+    public string sideName;
     public int turn;
+    public Color color;
     List<Unit> units = new List<Unit>();
     [SerializeField]
     public GameObject selectedToAdd = null;
-    
+
     public void AddTheNewUnit(Tile tile)
     {
-        units.Add(selectedToAdd.GetComponent<Unit>());
-        Instantiate(selectedToAdd, new Vector3(0, 0, 0), Quaternion.identity, tile.transform);
-        tile.AddUnit(selectedToAdd.GetComponent<Unit>());
+        if(tile.owner != this)
+        {
+            return;
+        }
+
+
+
+        GameObject go = Instantiate(selectedToAdd, tile.transform.position, Quaternion.identity, tile.transform);
+        Unit u = go.GetComponent<Unit>();
+        go.transform.Find("Marker").GetComponent<Renderer>().material.color = color;
+        
+        u.Side = this;
+        u.Tile = tile;
+
+        units.Add(u);
+
+        tile.AddUnit(u);
         selectedToAdd = null;
     }
 

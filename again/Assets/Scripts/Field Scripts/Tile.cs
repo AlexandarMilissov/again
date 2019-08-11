@@ -4,38 +4,24 @@ using UnityEngine;
 
 public class Tile : MonoBehaviour
 {
-    private int posX;
-    private int posZ;
+    public int posX;
+    public int posZ;
     public Unit unit = null;
+    public Side owner;
+    public List<Node> nodes = new List<Node>();
 
-    public int PosX
-    {
-        get
-        {
-            return posX;
-        }
-    }
-    public int PosZ
-    {
-        get
-        {
-            return posZ;
-        }
-    }
+    public Tile pathFindParent;
+    public float pathFindCostToHere = 0;
 
-    public Tile(int X, int Z)
+    public void AddUnit(Unit Unit)
     {
-        posX = X;
-        posZ = Z;
-    }
-
-    public void AddUnit(Unit unit)
-    {
-        this.unit = unit;
+        unit = Unit;
+        unit.gameObject.name = "Unit";
+        unit.gameObject.transform.position = this.transform.position;
+        unit.Tile = this;
     }
     public void RemoveUnit()
     {
         this.unit = null;
     }
-
 }

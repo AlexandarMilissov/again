@@ -12,6 +12,8 @@ public enum Armor
 
 public abstract class Unit : MonoBehaviour
 {
+    [SerializeField]
+    public Side Side;
     public Tile Tile;
     public Weapon Weapon;
     public Mount Mount;
